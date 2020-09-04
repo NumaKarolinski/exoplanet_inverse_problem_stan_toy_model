@@ -1,9 +1,3 @@
-import os
-
-os.environ["CC"] = "gcc"
-os.environ["CXX"] = "g++"
-os.environ["CXXFLAGS"] = "-O3 -mtune=native -march=native -Wno-unused-variable -Wno-unused-function"
-
 import pystan
 from matplotlib import pyplot as plt
 
@@ -15,7 +9,6 @@ num_times = 20
 synthetic_albedo_lightcurve_data, errors_on_data, times, longitudinal_boundary_angles = generate_data.generate_synthetic_albedo_lightcurve_data(number_Of_Slices = m, number_Of_Times = num_times, time_in_days_per_time_interval = 0.47)
 
 ocode = """
-
 functions{
 
     real get_substellar_longitude(real t, real initial_substellar_longitude, real w_rot, real w_orb){
