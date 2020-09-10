@@ -2,11 +2,11 @@ import numpy as np
 
 from random import seed
 import random
-seed(42069)
+seed(213)
 
-def get_substellar_longitude(t, initial_substellar_longitude, w_rot, w_orb):
+def get_substellar_longitude(t, initial_substellar_longitude, w_rot):
     
-    substellar_longitude = initial_substellar_longitude - ((w_rot - w_orb) * t)
+    substellar_longitude = initial_substellar_longitude - (w_rot * t)
     
     while substellar_longitude < 0.:
         substellar_longitude = substellar_longitude + (2 * np.pi)
@@ -72,7 +72,7 @@ def get_albedo_sum_term(albedo_slice_i, substellar_longitude, longitudinal_bound
         
     return returned_val
 
-def generate_synthetic_albedo_lightcurve_data(number_Of_Slices = 4, number_Of_Times = 20, time_in_days_per_time_interval = 0.47):
+def generate_synthetic_albedo_lightcurve_data(number_Of_Slices = 4, number_Of_Times = 20, time_in_days_per_time_interval = 0.21, verbose = False):
 
     times = [time_in_days_per_time_interval * t for t in range(number_Of_Times)]
 
@@ -84,17 +84,15 @@ def generate_synthetic_albedo_lightcurve_data(number_Of_Slices = 4, number_Of_Ti
     initial_substellar_longitude = 2. * np.pi * random.random()
 
     w_rot = (2. * np.pi) * (random.random() + 0.5)
-    # The way I use w_orb in this code could be wrong, it was not included in the clouds Teinturier paper since they ran their data
-    # over only a few days worth of data where w_orb is mostly negligible. I decided to include it anyways.
-    w_orb = (2. * np.pi / 365.) * (random.random() + 0.5)
-
-    #print("Initial Substellar Longitude: " + str(initial_substellar_longitude))
-    #print("Rotational Angular Frequency: " + str(w_rot))
-    #print("Orbital Angular Frequency: " + str(w_orb))
-    #print("Albedo Slice Values: ")
-    #print(slices_of_albedo)
     
-    albedo_lightcurve = []
+    if verbose == True:
+          
+        print("Initial Substellar Longitude: " + str(initial_substellar_longitude))
+        print("Rotational Angular Frequency: " + str(w_rot))
+        print("Albedo Slice Values: ")
+        print(slices_of_albedo)
+    
+    albedo_lightcurve_data_no_errors = []
     
     for t in times:
         
@@ -102,7 +100,7 @@ def generate_synthetic_albedo_lightcurve_data(number_Of_Slices = 4, number_Of_Ti
         
         for i in range(m):
             
-            substellar_longitude = get_substellar_longitude(t, initial_substellar_longitude, w_rot, w_orb)
+            substellar_longitude = get_substellar_longitude(t, initial_substellar_longitude, w_rot)
             
             phi_i = longitudinal_boundary_angles[i]
             phi_i1 = longitudinal_boundary_angles[(i + 1) % m]
@@ -110,19 +108,33 @@ def generate_synthetic_albedo_lightcurve_data(number_Of_Slices = 4, number_Of_Ti
             albedo_sum_term = get_albedo_sum_term(slices_of_albedo[i],\
                                            substellar_longitude,\
                                            (phi_i, phi_i1))
-            
+          
             all_albedo_sum_terms.append(albedo_sum_term)
             
         albedo_in_lightcurve = np.sum(np.array(all_albedo_sum_terms)) / np.pi
         
-        albedo_lightcurve.append(albedo_in_lightcurve)
+        albedo_lightcurve_data_no_errors.append(albedo_in_lightcurve)
 
-    max_albedo_in_lightcurve = max(albedo_lightcurve)
+    max_albedo_in_lightcurve = max(albedo_lightcurve_data_no_errors)
     albedo_error = max_albedo_in_lightcurve * 0.02
 
-    synthetic_albedo_lightcurve_data = [albedo + random.normalvariate(0., albedo_error) for albedo in albedo_lightcurve]
-    errors_on_data = [albedo_error for i in range(len(albedo_lightcurve))]
+    albedo_lightcurve_data_with_errors = [-1. for albedo in albedo_lightcurve_data_no_errors]
     
-    print(albedo_lightcurve)
+    while not all(i >= 0. for i in albedo_lightcurve_data_with_errors):
+        albedo_lightcurve_data_with_errors = [albedo + random.normalvariate(0., albedo_error) for albedo in albedo_lightcurve_data_no_errors]
+        
+    errors_on_data = [albedo_error for i in range(len(albedo_lightcurve_data_no_errors))]
     
-    return synthetic_albedo_lightcurve_data, errors_on_data, times, longitudinal_boundary_angles
+    if verbose == True:
+        print("Albedo Lightcurve Generated: " + str(albedo_lightcurve_data_with_errors))
+    
+    #init_values = {'w_rot': w_rot,\
+                   #'initial_substellar_longitude': initial_substellar_longitude,\
+                   #'slices_of_albedo': slices_of_albedo}
+    
+    init_values = {'w_rot': (2. * np.pi) * (random.random() + 0.5),\
+                   'initial_substellar_longitude': 2. * np.pi * random.random(),\
+                   'slices_of_albedo': [random.random() for i in range(m)]}
+    
+    return albedo_lightcurve_data_no_errors, albedo_lightcurve_data_with_errors,\
+errors_on_data, times, longitudinal_boundary_angles, init_values
